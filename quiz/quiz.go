@@ -9,6 +9,7 @@ import (
 	"io"
 	"os"
 	"strings"
+	"time"
 )
 
 var (
@@ -52,14 +53,31 @@ func CreateProblems(records [][]string) []problem {
 	return problems
 }
 
-func AskQuestion(writer io.Writer, reader io.Reader, problems []problem) []string {
+func AskQuestion(
+	writer io.Writer,
+	reader io.Reader,
+	problems []problem,
+	timer *time.Timer,
+) []string {
 	bufReader := bufio.NewReader(reader)
 	answers := make([]string, 0)
 
 	for i, problem := range problems {
 		fmt.Fprintf(writer, "Problem #%d: %s = ", i+1, problem.question)
-		answer, _ := bufReader.ReadString('\n')
-		answers = append(answers, strings.TrimSpace(answer))
+		answerCh := make(chan string)
+
+		go func() {
+			answer, _ := bufReader.ReadString('\n')
+			answerCh <- answer
+		}()
+
+		select {
+		case <-timer.C:
+			fmt.Println()
+			return answers
+		case answer := <-answerCh:
+			answers = append(answers, strings.TrimSpace(answer))
+		}
 	}
 
 	return answers
@@ -67,7 +85,7 @@ func AskQuestion(writer io.Writer, reader io.Reader, problems []problem) []strin
 
 func EvaluateAnswers(writer io.Writer, problems []problem, userAnswers []string) []bool {
 	totalCorrectQuestions := 0
-	evaluatedAnswers := []bool{}
+	evaluatedAnswers := make([]bool, len(problems))
 
 	for i, answer := range userAnswers {
 		result := problems[i].answer == answer
@@ -76,7 +94,7 @@ func EvaluateAnswers(writer io.Writer, problems []problem, userAnswers []string)
 			totalCorrectQuestions++
 		}
 
-		evaluatedAnswers = append(evaluatedAnswers, result)
+		evaluatedAnswers[i] = result
 	}
 
 	fmt.Fprintf(
@@ -90,7 +108,9 @@ func EvaluateAnswers(writer io.Writer, problems []problem, userAnswers []string)
 }
 
 func main() {
-	fileFlag := flag.String("f", "problems.csv", "a csv file in the format of 'question,answer'")
+	fileFlag := flag.String("file", "problems.csv", "a csv file in the format of 'question,answer'")
+
+	timeFlag := flag.Int("time", 30, "the time limit for the quiz in second")
 
 	helpFlag := flag.Bool("h", false, "Show help message")
 
@@ -102,6 +122,7 @@ func main() {
 	}
 
 	filename := *fileFlag
+	timeLimit := time.Duration(*timeFlag) * time.Second
 
 	records, err := ReadCSVFile(filename)
 	if err != nil {
@@ -110,7 +131,9 @@ func main() {
 
 	problems := CreateProblems(records)
 
-	userAnswers := AskQuestion(os.Stdout, os.Stdin, problems)
+	timer := time.NewTimer(timeLimit)
+
+	userAnswers := AskQuestion(os.Stdout, os.Stdin, problems, timer)
 
 	EvaluateAnswers(os.Stdout, problems, userAnswers)
 }

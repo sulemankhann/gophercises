@@ -7,6 +7,7 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestEvaluateAnswers(t *testing.T) {
@@ -69,7 +70,8 @@ func TestAskQuestion(t *testing.T) {
 	buffer := bytes.Buffer{}
 	answers := strings.NewReader("10\n10\n2\n") // Simulate user input
 
-	capturedAnswers := AskQuestion(&buffer, answers, problems)
+	timer := time.NewTimer(5 * time.Second)
+	capturedAnswers := AskQuestion(&buffer, answers, problems, timer)
 	expectedAnswers := []string{"10", "10", "2"}
 
 	got := buffer.String()
