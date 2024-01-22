@@ -7,6 +7,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"math/rand"
 	"os"
 	"strings"
 	"time"
@@ -51,6 +52,17 @@ func CreateProblems(records [][]string) []problem {
 	}
 
 	return problems
+}
+
+func ShuffleProblems(problems []problem) []problem {
+	fmt.Println("sss")
+
+	shuffled := make([]problem, len(problems))
+	for i := range problems {
+		j := rand.Intn(len(problems) - i)
+		shuffled[i], shuffled[i+j] = problems[i+j], problems[i]
+	}
+	return shuffled
 }
 
 func AskQuestion(
@@ -108,11 +120,16 @@ func EvaluateAnswers(writer io.Writer, problems []problem, userAnswers []string)
 }
 
 func main() {
+	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+	r.Seed(time.Now().UnixNano())
+
 	fileFlag := flag.String("file", "problems.csv", "a csv file in the format of 'question,answer'")
 
 	timeFlag := flag.Int("time", 30, "the time limit for the quiz in second")
 
 	helpFlag := flag.Bool("h", false, "Show help message")
+
+	shuffleFlag := flag.Bool("shuffle", false, "change order of the quiz")
 
 	flag.Parse()
 
@@ -130,6 +147,10 @@ func main() {
 	}
 
 	problems := CreateProblems(records)
+
+	if *shuffleFlag {
+		problems = ShuffleProblems(problems)
+	}
 
 	timer := time.NewTimer(timeLimit)
 

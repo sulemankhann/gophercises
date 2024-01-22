@@ -10,6 +10,29 @@ import (
 	"time"
 )
 
+func TestShuffleProblems(t *testing.T) {
+	problems := []problem{
+		{
+			question: "5+5",
+			answer:   "10",
+		},
+		{
+			question: "7+3",
+			answer:   "10",
+		},
+		{
+			question: "1+1",
+			answer:   "2",
+		},
+	}
+
+	shuffledProblems := ShuffleProblems(problems)
+
+	if reflect.DeepEqual(problems, shuffledProblems) {
+		t.Errorf("Shuffled array is the same as the original one.")
+	}
+}
+
 func TestEvaluateAnswers(t *testing.T) {
 	problems := []problem{
 		{
